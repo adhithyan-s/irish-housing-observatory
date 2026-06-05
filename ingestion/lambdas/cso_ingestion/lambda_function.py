@@ -2,12 +2,12 @@ import json
 import boto3
 import urllib.request
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timezone
 
 # --- config ---
 BUCKET = "ireland-housing-bronze"
 
-# CSO uses JSON-RPC over POST — this is the correct endpoint
+# CSO uses JSON-RPC over POST
 CSO_JSONRPC_URL = "https://ws.cso.ie/public/api.jsonrpc"
 
 # Verified dataset codes (HPM06 = RPPI, BHA04 = dwelling completions)
@@ -55,7 +55,7 @@ def fetch_cso_dataset(table_code: str) -> dict:
 
 def build_s3_key(dataset_name: str) -> str:
     """Hive-style partition key for easy Glue/Athena discovery."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return (
         f"cso/{dataset_name}/"
         f"year={now.year}/month={now.month:02d}/"
@@ -69,7 +69,7 @@ def write_to_s3(data: dict, key: str) -> None:
         Body=json.dumps(data, ensure_ascii=False),
         ContentType="application/json",
         Metadata={
-            "ingestion_time": datetime.utcnow().isoformat(),
+            "ingestion_time": datetime.now(timezone.utc).isoformat(),
             "source": "cso_pxstat"
         },
     )
@@ -113,6 +113,6 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({
             "results": results,
-            "ingestion_time": datetime.utcnow().isoformat()
+            "ingestion_time": datetime.now(timezone.utc).isoformat()
         })
     }

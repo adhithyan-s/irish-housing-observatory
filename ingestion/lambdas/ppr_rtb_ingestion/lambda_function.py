@@ -2,7 +2,7 @@ import json
 import boto3
 import urllib.request
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timezone
 
 BUCKET = "ireland-housing-bronze"
 s3 = boto3.client("s3")
@@ -23,7 +23,7 @@ def ingest_ppr() -> list:
     NOTE: these files are Dublin-only subsets. We'll add national data later.
     """
     results = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     for year, url in PPR_YEARLY_FILES:
         try:
@@ -83,7 +83,7 @@ RTB_CSV_URLS = [
 
 def ingest_rtb() -> list:
     results = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     for dataset in RTB_CSV_URLS:
         try:
@@ -146,6 +146,6 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({
             "results": all_results,
-            "ingestion_time": datetime.utcnow().isoformat()
+            "ingestion_time": datetime.now(timezone.utc).isoformat()
         })
     }
