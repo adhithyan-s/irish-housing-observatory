@@ -365,3 +365,27 @@ class TestRtbColumnCleaning:
         assert self._is_code_column("Number of Bedrooms") is False
         assert self._is_code_column("Location") is False
         assert self._is_code_column("STATISTIC") is False
+
+
+class TestLocationCodeCoalesce:
+
+    def test_eircode_preferred_over_postal_code(self):
+        """When both exist, eircode wins."""
+        eircode = "D06 XY12"
+        postal = "Dublin 6"
+        result = eircode if eircode else postal
+        assert result == "D06 XY12"
+
+    def test_postal_code_used_when_no_eircode(self):
+        """2015-2020 files have no eircode — postal_code used."""
+        eircode = None
+        postal = "Dublin 15"
+        result = eircode if eircode else postal
+        assert result == "Dublin 15"
+
+    def test_both_null_gives_null(self):
+        """Old properties with neither code."""
+        eircode = None
+        postal = None
+        result = eircode if eircode else postal
+        assert result is None

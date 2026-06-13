@@ -327,6 +327,16 @@ def process_ppr():
     df.cache()
     df.count()  # materialise cache immediately — single S3 read from here on
     print(f"\nTotal rows after union (cached): {df.count():,}")
+    
+    # Coalesce postal_code and eircode into single location_code column
+    # 2015-2020 files have postal_code, 2021 file has eircode — same concept
+    df = df.withColumn("location_code",
+        F.coalesce(
+            F.when(F.col("eircode").isNotNull() & (F.col("eircode") != ""), F.col("eircode")),
+            F.when(F.col("postal_code").isNotNull() & (F.col("postal_code") != ""), F.col("postal_code"))
+        )
+    )
+    df = df.drop("postal_code", "eircode")
 
     df = df.withColumn("price_eur",
         F.regexp_replace(F.col("price_raw"), r"[€\x80?,\s]", "")
