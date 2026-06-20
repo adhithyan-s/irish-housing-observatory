@@ -1,6 +1,6 @@
 # Irish Housing Observatory
 
-An end-to-end AWS data engineering pipeline that automatically collects, transforms, and serves Irish housing and rental market data — built to understand one of Ireland's most pressing social crises.
+An end-to-end AWS data engineering pipeline that automatically collects, transforms, and serves Irish housing and rental market data - built to understand one of Ireland's most pressing social crises.
 
 ## Live Links
 
@@ -17,7 +17,7 @@ An end-to-end AWS data engineering pipeline that automatically collects, transfo
 
 ## Problem Statement
 
-Ireland is in a housing crisis. Average Dublin rents reached **€2,157/month in 2025**, more than double the 2011 low. The national property price index hit **163.6 in 2025** - up 63% from the 2005 base. Housing completions fall short of the estimated 35,000/year needed. Yet there is no single automated platform that aggregates all public housing data — CSO property prices, RTB rents, planning permissions, property sales — into one queryable, up-to-date system.
+Ireland is in a housing crisis. Average Dublin rents reached **€2,157/month in 2025**, more than double the 2011 low. The national property price index hit **163.6 in 2025** - up 63% from the 2005 base. Housing completions fall short of the estimated 35,000/year needed. Yet there is no single automated platform that aggregates all public housing data - CSO property prices, RTB rents, planning permissions, property sales - into one queryable, up-to-date system.
 
 This pipeline fills that gap.
 
@@ -98,7 +98,7 @@ flowchart TD
 | CSO PxStat API | Residential Property Price Index (HPM06) | 2005–present | Monthly |
 | CSO PxStat API | Planning Permissions for Communal Dwellings (BHA04) | 2001–present | Annual |
 | CSO / RTB | Average Monthly Rent by Location (RIA02) | 2008–present | Quarterly |
-| PSRA / data.smartdublin.ie | Property Price Register — Dublin | 2015, 2016, 2020, 2021 | Monthly |
+| PSRA / data.smartdublin.ie | Property Price Register - Dublin | 2015, 2016, 2020, 2021 | Monthly |
 
 ---
 
@@ -108,7 +108,7 @@ flowchart TD
 |-------|------|---------|
 | **Ingestion** | AWS Lambda (Python 3.12) | Serverless HTTP ingestion from public APIs |
 | **Scheduling** | AWS EventBridge | Cron-style triggers for Lambda |
-| **Storage** | AWS S3 — Bronze / Silver / Gold | Medallion architecture in Parquet |
+| **Storage** | AWS S3 - Bronze / Silver / Gold | Medallion architecture in Parquet |
 | **Transformation** | AWS Glue 4.0 (PySpark) | Schema enforcement, cleaning, aggregation |
 | **Orchestration** | AWS Step Functions | Pipeline coordination and retry logic |
 | **Catalog** | AWS Glue Data Catalog | Schema registration for Athena |
@@ -127,8 +127,8 @@ Base URL: `https://i969tsu6e3.execute-api.us-east-1.amazonaws.com`
 |--------|----------|-------------|
 | GET | `/health` | Service status |
 | GET | `/summary` | Full housing crisis summary by year |
-| GET | `/rents` | Rent trends — filter by `?location=Dublin&from_year=2016` |
-| GET | `/prices` | Price index — filter by `?type=National&from_year=2010` |
+| GET | `/rents` | Rent trends - filter by `?location=Dublin&from_year=2016` |
+| GET | `/prices` | Price index - filter by `?type=National&from_year=2010` |
 | GET | `/sales` | Dublin property sales by year |
 
 **Example:**
@@ -156,7 +156,7 @@ curl "https://i969tsu6e3.execute-api.us-east-1.amazonaws.com/rents?location=Dubl
 
 ---
 
-## Gold Layer — Analytics Tables
+## Gold Layer - Analytics Tables
 
 Five pre-aggregated tables in the Gold layer, queryable via Athena and the REST API:
 
@@ -170,7 +170,7 @@ Five pre-aggregated tables in the Gold layer, queryable via Athena and the REST 
 
 ---
 
-## Silver Layer — Cleaned Tables
+## Silver Layer - Cleaned Tables
 
 | Table | Source | Rows | Key transformations |
 |-------|--------|------|-------------------|
@@ -191,8 +191,6 @@ irish-housing-observatory/
 │   │   │   └── lambda_function.py      # CSO PxStat JSON-RPC ingestion
 │   │   └── ppr_rtb_ingestion/
 │   │       └── lambda_function.py      # PPR CSV + RTB ingestion
-│   └── tests/
-│       └── test_cso_ingestion.py
 ├── transform/
 │   ├── glue_jobs/
 │   │   ├── bronze_to_silver.py         # PySpark Bronze -> Silver
@@ -223,16 +221,16 @@ irish-housing-observatory/
 The 2015–2020 PPR files have a `Postal Code` column; the 2021 file has `Eircode` instead. Reading all files together caused Spark to lock onto the first file's schema and null-fill the 2021 date column. Reading each file individually then using `unionByName(allowMissingColumns=True)` solved this cleanly.
 
 **Why `df.cache()` after the union?**
-Spark DataFrames are lazily evaluated — every action re-executes the full plan from scratch. The 2021 PPR file has complex address fields with embedded commas, so the CSV parser split rows differently on each scan, producing non-deterministic null counts. Caching forces a single S3 read; all subsequent actions use the same in-memory result.
+Spark DataFrames are lazily evaluated - every action re-executes the full plan from scratch. The 2021 PPR file has complex address fields with embedded commas, so the CSV parser split rows differently on each scan, producing non-deterministic null counts. Caching forces a single S3 read; all subsequent actions use the same in-memory result.
 
 **Why pivot the price index?**
-The CSO HPM06 dataset arrives in long format — four metric types stacked as separate rows per region per month. Grafana and SQL consumers work better with wide format. `pivot()` reshapes it so each metric becomes its own column — one row per region per month.
+The CSO HPM06 dataset arrives in long format - four metric types stacked as separate rows per region per month. Grafana and SQL consumers work better with wide format. `pivot()` reshapes it so each metric becomes its own column - one row per region per month.
 
 **Why a year spine + LEFT JOIN for the summary table?**
 Each data source covers different years (BHA04 from 2001, HPM06 from 2005, RTB from 2008, PPR from 2015). An inner join would return only 2020–2021. Building a year spine from all distinct years across all sources and LEFT JOINing preserves the full historical picture with nulls where data doesn't exist.
 
 **Why `date_parse(CAST(year AS VARCHAR), '%Y')` in Grafana queries?**
-Integer year columns (2005, 2006...) are interpreted by Grafana as Unix timestamps in seconds — making 2005 render as 05:33:25 on 1 Jan 1970. Converting to a proper timestamp in Athena SQL before the data reaches Grafana fixes the time axis correctly.
+Integer year columns (2005, 2006...) are interpreted by Grafana as Unix timestamps in seconds - making 2005 render as 05:33:25 on 1 Jan 1970. Converting to a proper timestamp in Athena SQL before the data reaches Grafana fixes the time axis correctly.
 
 ---
 
@@ -255,13 +253,13 @@ Designed to run within AWS Free Tier. Estimated monthly cost at this data scale:
 
 ## Build Phases
 
-- [x] Phase 1 — Bronze ingestion (CSO, RTB, PPR via Lambda)
-- [x] Phase 2 — Silver transformation (Glue PySpark, all sources clean)
-- [x] Phase 3 — Gold aggregations (5 analytics tables)
-- [x] Phase 4 — REST API (API Gateway + Lambda + Athena)
-- [x] Phase 4 — Grafana dashboard (6 panels, public link)
-- [ ] Phase 5 — EventBridge scheduling + Step Functions orchestration
-- [ ] Phase 6 — Terraform infrastructure-as-code
+- [x] Phase 1 - Bronze ingestion (CSO, RTB, PPR via Lambda)
+- [x] Phase 2 - Silver transformation (Glue PySpark, all sources clean)
+- [x] Phase 3 - Gold aggregations (5 analytics tables)
+- [x] Phase 4 - REST API (API Gateway + Lambda + Athena)
+- [x] Phase 4 - Grafana dashboard (6 panels, public link)
+- [ ] Phase 5 - EventBridge scheduling + Step Functions orchestration
+- [ ] Phase 6 - Terraform infrastructure-as-code
 
 ---
 
