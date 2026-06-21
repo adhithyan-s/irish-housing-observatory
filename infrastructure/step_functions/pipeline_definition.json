@@ -1,0 +1,150 @@
+{
+  "Comment": "Irish Housing Observatory - full pipeline orchestration",
+  "StartAt": "Ingest All Sources",
+  "States": {
+    "Ingest All Sources": {
+      "Type": "Parallel",
+      "Comment": "Run both ingestion Lambdas simultaneously",
+      "Branches": [
+        {
+          "StartAt": "CSO Ingestion",
+          "States": {
+            "CSO Ingestion": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-1:036331728519:function:irish-housing-observatory-cso-ingestion",
+                "Payload": {
+                  "source": "step_functions_scheduled"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "PPR RTB Ingestion",
+          "States": {
+            "PPR RTB Ingestion": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "arn:aws:lambda:us-east-1:036331728519:function:irish-housing-observatory-ppr-rtb-ingestion",
+                "Payload": {
+                  "source": "step_functions_scheduled"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Bronze to Silver",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Notify Failure",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "Bronze to Silver": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "irish-housing-observatory-bronze-to-silver"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Glue.ConcurrentRunsExceededException"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 2,
+          "BackoffRate": 1
+        }
+      ],
+      "Next": "Silver to Gold",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Notify Failure",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "Silver to Gold": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "irish-housing-observatory-silver-to-gold"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Glue.ConcurrentRunsExceededException"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 2,
+          "BackoffRate": 1
+        }
+      ],
+      "Next": "Notify Success",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Notify Failure",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "Notify Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:036331728519:irish-housing-observatory-alerts",
+        "Subject": "✅ Irish Housing Observatory - Pipeline Complete",
+        "Message": "The full pipeline ran successfully. Bronze ingestion, Silver transformation, and Gold aggregation all completed. Dashboard data is up to date."
+      },
+      "End": true
+    },
+    "Notify Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:036331728519:irish-housing-observatory-alerts",
+        "Subject": "❌ Irish Housing Observatory - Pipeline Failed",
+        "Message.$": "States.Format('Pipeline failed. Error: {}', $.error)"
+      },
+      "End": true
+    }
+  }
+}

@@ -186,11 +186,11 @@ Five pre-aggregated tables in the Gold layer, queryable via Athena and the REST 
 ```
 irish-housing-observatory/
 ├── ingestion/
-│   ├── lambdas/
-│   │   ├── cso_ingestion/
-│   │   │   └── lambda_function.py      # CSO PxStat JSON-RPC ingestion
-│   │   └── ppr_rtb_ingestion/
-│   │       └── lambda_function.py      # PPR CSV + RTB ingestion
+│   └── lambdas/
+│       ├── cso_ingestion/
+│       │   └── lambda_function.py      # CSO PxStat JSON-RPC ingestion
+│       └── ppr_rtb_ingestion/
+│           └── lambda_function.py      # PPR CSV + RTB ingestion
 ├── transform/
 │   ├── glue_jobs/
 │   │   ├── bronze_to_silver.py         # PySpark Bronze -> Silver
@@ -258,7 +258,7 @@ Designed to run within AWS Free Tier. Estimated monthly cost at this data scale:
 - [x] Phase 3 - Gold aggregations (5 analytics tables)
 - [x] Phase 4 - REST API (API Gateway + Lambda + Athena)
 - [x] Phase 4 - Grafana dashboard (6 panels, public link)
-- [ ] Phase 5 - EventBridge scheduling + Step Functions orchestration
+- [x] Phase 5 - EventBridge scheduling + Step Functions orchestration
 - [ ] Phase 6 - Terraform infrastructure-as-code
 
 ---
